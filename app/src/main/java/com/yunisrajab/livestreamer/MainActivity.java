@@ -1,18 +1,17 @@
 package com.yunisrajab.livestreamer;
 
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.net.UnknownHostException;
+import java.io.*;
+import java.net.*;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.PackageManager;
-import android.media.AudioFormat;
-import android.media.AudioRecord;
-import android.media.MediaRecorder;
+import android.media.*;
+import android.net.rtp.AudioCodec;
+import android.net.rtp.AudioGroup;
+import android.net.rtp.AudioStream;
+import android.net.rtp.RtpStream;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -20,6 +19,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private Button startButton,stopButton;
@@ -29,6 +29,7 @@ public class MainActivity extends Activity {
     private int port=50005;
 
     AudioRecord recorder;
+//    AudioStream streamer;
 
     private int sampleRate = 16000 ; // 44100 for music
     private int channelConfig = AudioFormat.CHANNEL_CONFIGURATION_MONO;
@@ -68,7 +69,9 @@ public class MainActivity extends Activity {
         @Override
         public void onClick(View arg0) {
             status = true;
+            Toast.makeText(getApplicationContext(),"MinBufferSize: " +minBufSize, Toast.LENGTH_SHORT).show();
             startStreaming();
+            startReceiving();
         }
 
     };
@@ -89,7 +92,7 @@ public class MainActivity extends Activity {
                     Log.d(TAG,"Buffer created of size " + minBufSize);
                     DatagramPacket packet;
 
-                    final InetAddress destination = InetAddress.getByName("192.168.0.16");
+                    final InetAddress destination = InetAddress.getByName("192.168.0.18");
                     Log.d(TAG, "Address retrieved");
 
                     recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,sampleRate,
@@ -100,29 +103,18 @@ public class MainActivity extends Activity {
 
                     while(status == true) {
                         //reading data from MIC into buffer
-                        /*minBufSize = */recorder.read(buffer, 0, buffer.length);
-
+                        recorder.read(buffer, 0, buffer.length);
                         //putting buffer in the packet
                         packet = new DatagramPacket (buffer,buffer.length,destination,port);
-
                         socket.send(packet);
                         Log.d(TAG,"MinBufferSize: " +minBufSize);
                     }
                 }
-                catch (SocketException e)
-                {
-                    Log.e(TAG, "SocketException");
-                } catch(UnknownHostException e) {
+                catch(UnknownHostException e) {
                     Log.e(TAG, "UnknownHostException");
                 } catch (IOException e) {
                     e.printStackTrace();
                     Log.e(TAG, "IOException");
-                } catch (IllegalStateException e)
-                {
-                    Log.e(TAG, "IllegalStateException");
-                } catch (IllegalArgumentException e)
-                {
-                    Log.e(TAG, "IllegalArgumentException");
                 } catch (Exception e)
                 {
                     Log.e(TAG, "Exception: "+e);
@@ -132,33 +124,52 @@ public class MainActivity extends Activity {
         });
         streamThread.start();
     }
-/*    private static int[] mSampleRates = new int[] { 8000, 11025, 22050, 44100 };
-    public AudioRecord findAudioRecord() {
-        for (int rate : mSampleRates) {
-            for (short audioFormat : new short[] { AudioFormat.ENCODING_PCM_8BIT, AudioFormat.ENCODING_PCM_16BIT }) {
-                for (short channelConfig : new short[] { AudioFormat.CHANNEL_IN_MONO, AudioFormat.CHANNEL_IN_STEREO }) {
-                    try {
-                        Log.d(TAG, "Attempting rate " + rate + "Hz, bits: " + audioFormat + ", channel: "
-                                + channelConfig);
-                        int bufferSize = AudioRecord.getMinBufferSize(rate, channelConfig, audioFormat);
 
-                        if (bufferSize != AudioRecord.ERROR_BAD_VALUE) {
-                            // check if we can instantiate and have a success
-                            AudioRecord recorder = new AudioRecord(MediaRecorder.AudioSource.DEFAULT,
-                                    rate, channelConfig, audioFormat, bufferSize);
+    public void startReceiving()
+    {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    DatagramSocket socket = new DatagramSocket();
+                    Log.d(TAG, "Socket Created");
 
-                            Log.d(TAG, "recorder: "+recorder.getRecordingState());
-                            if (recorder.getState() == AudioRecord.STATE_INITIALIZED)
-                                return recorder;
-                        }
-                    } catch (Exception e) {
-                        Log.e(TAG, rate + "Exception, keep trying.",e);
+                    byte[] buffer = new byte[minBufSize];
+
+                    Log.d(TAG,"Buffer created of size " + minBufSize);
+                    DatagramPacket packet;
+
+                    final InetAddress destination = InetAddress.getByName("192.168.0.18");
+                    Log.d(TAG, "Address retrieved "+destination);
+
+                    AudioManager audio =  (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                    audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                    AudioGroup audioGroup = new AudioGroup();
+                    audioGroup.setMode(AudioGroup.MODE_NORMAL);
+                    AudioStream audioStream = new AudioStream(destination);
+                    audioStream.setCodec(AudioCodec.PCMU);
+                    audioStream.setMode(RtpStream.MODE_NORMAL);
+                    //set receiver(vlc player) machine ip address(please update with your machine ip)
+                    audioStream.associate(InetAddress.getByAddress(new byte[] {(byte)192, (byte)168,
+                            (byte)1, (byte)19 }), 50005);
+                    audioStream.join(audioGroup);
+
+                    while (status == true)
+                    {
+                        //putting buffer in the packet
+                        packet = new DatagramPacket (buffer,buffer.length,destination,port);
+                        socket.receive(packet);
+                        Log.d(TAG,"MinBufferSize: " +minBufSize);
                     }
+
+                }
+                catch (Exception e)
+                {
+
                 }
             }
-        }
-        return null;
-    }*/
+        }).start();
+    }
     private void requestRecordAudioPermission() {
         //check API version, do nothing if API version < 23!
         int currentapiVersion = android.os.Build.VERSION.SDK_INT;
