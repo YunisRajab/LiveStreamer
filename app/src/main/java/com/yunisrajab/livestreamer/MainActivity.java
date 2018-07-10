@@ -57,6 +57,8 @@ public class MainActivity extends Activity {
         //set address to previously saved address when the app starts
 //        ipAdd.setText(mAddress);;
 
+        mAudioManager = (AudioManager)  getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+
         TextView view = (TextView) findViewById(R.id.textView);
         view.setText(getLocalIPAddress());
         startButton = (Button) findViewById (R.id.start_button);
@@ -98,6 +100,7 @@ public class MainActivity extends Activity {
         @Override
         public void onClick(View arg0) {
             status = true;
+            mAudioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
             mAddress = editAddress.getText().toString();
             if (customSwitch.isChecked())   {
                 grabCustomSettings();
