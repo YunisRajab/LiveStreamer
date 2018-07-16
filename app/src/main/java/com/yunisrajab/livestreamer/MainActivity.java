@@ -45,8 +45,8 @@ public class MainActivity extends Activity {
     // this is a wild guess
     public static final int STREAM_TYPE = AudioManager.STREAM_VOICE_CALL;
 
-    Receiver receiver = new Receiver();
-    Sender sender = new Sender();
+    Receiver receiver;
+    Sender sender;
 
 
     @Override
@@ -105,8 +105,8 @@ public class MainActivity extends Activity {
             if (customSwitch.isChecked())   {
                 grabCustomSettings();
             }
-            receiver.Receiver(sampleRate, channelConfig, audioFormat, minBufSize, port);
-            sender.Sender(mAddress, sampleRate, channelConfig, audioFormat, minBufSize, port);
+            receiver = new Receiver(sampleRate, channelConfig, audioFormat, minBufSize, port);
+            sender = new Sender(mAddress, sampleRate, channelConfig, audioFormat, minBufSize, port);
             receiver.run();
             sender.run();
         }
@@ -149,6 +149,7 @@ public class MainActivity extends Activity {
                     // permission denied, boo! Disable the
                     // functionality that depends on this permission.
                     Log.d(TAG, "Activity Denied!");
+                    System.exit(0);
                     finish();
                 }
                 return;

@@ -28,7 +28,7 @@ public class Sender {
     private int port;
     DatagramSocket mSocket;
 
-    public void Sender(String address, int rate, int channel, int encoding, int buff, int port)    {
+    Sender(String address, int rate, int channel, int encoding, int buff, int port)    {
 
         mAddress = address;
         sampleRate = rate;

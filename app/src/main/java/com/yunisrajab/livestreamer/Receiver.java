@@ -22,7 +22,7 @@ public class Receiver {
     private boolean status = false;
     DatagramSocket mSocket;
 
-    public void Receiver(int rate, int channel, int encoding, int buff, int port)
+    Receiver(int rate, int channel, int encoding, int buff, int port)
     {
         sampleRate = rate;
         channelConfig = channel;
@@ -41,6 +41,7 @@ public class Receiver {
                             channelConfig, audioFormat, minBufSize,
                             AudioTrack.MODE_STREAM);
                     mAudioTrack.play();
+                    Log.d(TAG,"AudioTrack initialized");
                     // Define a socket to receive the audio
                     mSocket = new DatagramSocket(port);
                     byte[] buff = new byte[minBufSize];
